@@ -1,15 +1,10 @@
 {
   "name": "Job Tracker",
   "short_name": "JobTracker",
-  "start_url": "/job-tracker/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "description": "Offline job tracker app",
-  "icons": [
-    {
-      "src": "icon.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
-  ]
+  "icons": []
 }
