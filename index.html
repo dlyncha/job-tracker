@@ -42,10 +42,13 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
     }
 
-    .item-controls button {
-      margin-left: 5px;
+    .item-controls {
+      display: flex;
+      gap: 5px;
+      margin-top: 5px;
     }
 
     .type-text, .date-text {
@@ -79,9 +82,16 @@
       padding: 8px;
       font-size: 16px;
       margin-right: 2%;
+      margin-top: 5px;
     }
 
     #fileInput { display: none; }
+
+    /* Make buttons larger for touch devices */
+    .item-controls button {
+      padding: 6px 10px;
+      font-size: 16px;
+    }
   </style>
 </head>
 
