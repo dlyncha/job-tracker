@@ -44,6 +44,10 @@
       align-items: center;
     }
 
+    .item-controls button {
+      margin-left: 5px;
+    }
+
     .type-text, .date-text {
       font-size: 12px;
       color: #666;
@@ -51,13 +55,12 @@
     }
 
     button {
-      padding: 12px 20px;
+      padding: 8px 12px;
       border: none;
       color: white;
       border-radius: 6px;
       cursor: pointer;
       font-weight: bold;
-      margin-left: 5px;
       touch-action: manipulation;
     }
 
@@ -69,6 +72,7 @@
     .complete-btn { background: #4CAF50; }
     .delete-btn   { background: #F44336; }
     .return-btn   { background: #2196F3; }
+    .move-up-btn, .move-down-btn { background: #9C27B0; }
     .add-btn, .import-btn, .export-btn { background: #FF9800; }
 
     input, select {
@@ -144,9 +148,11 @@
       el.innerHTML = `
         <div class="item-header">
           <strong>${task.name}</strong>
-          <div>
+          <div class="item-controls">
             <button class="complete-btn" onclick="completeTask(${index})">✓</button>
             <button class="delete-btn" onclick="deleteTask(${index})">✕</button>
+            <button class="move-up-btn" onclick="moveUp(${index})">↑</button>
+            <button class="move-down-btn" onclick="moveDown(${index})">↓</button>
           </div>
         </div>
         <div class="type-text">${task.type}</div>
@@ -218,6 +224,20 @@
       todoList.push(task);
       doneList.splice(index, 1);
 
+      save();
+      render();
+    }
+
+    function moveUp(index) {
+      if (index === 0) return;
+      [todoList[index - 1], todoList[index]] = [todoList[index], todoList[index - 1]];
+      save();
+      render();
+    }
+
+    function moveDown(index) {
+      if (index === todoList.length - 1) return;
+      [todoList[index + 1], todoList[index]] = [todoList[index], todoList[index + 1]];
       save();
       render();
     }
