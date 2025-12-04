@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <title>Job Tracker</title>
+
+  <!-- Add Manifest -->
+  <link rel="manifest" href="manifest.json">
+
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -45,14 +49,14 @@
     }
 
     button {
-      padding: 12px 20px;           /* larger touch area */
+      padding: 12px 20px;
       border: none;
       color: white;
       border-radius: 6px;
       cursor: pointer;
       font-weight: bold;
       margin-left: 5px;
-      touch-action: manipulation;    /* ensures proper tap on mobile */
+      touch-action: manipulation;
     }
 
     button:hover {
@@ -60,10 +64,10 @@
       transform: scale(1.05);
     }
 
-    .complete-btn { background: #4CAF50; } /* bright green */
-    .delete-btn   { background: #F44336; } /* red */
-    .return-btn   { background: #2196F3; } /* bright blue */
-    .add-btn, .import-btn, .export-btn { background: #FF9800; } /* bright orange */
+    .complete-btn { background: #4CAF50; }
+    .delete-btn   { background: #F44336; }
+    .return-btn   { background: #2196F3; }
+    .add-btn, .import-btn, .export-btn { background: #FF9800; }
 
     input, select {
       padding: 8px;
@@ -201,7 +205,6 @@
     }
 
     function deleteTask(index) {
-      // Deleted immediately without confirmation
       todoList.splice(index, 1);
       save();
       render();
@@ -270,7 +273,7 @@
           .map(line => line.split(",").map(x => x.replace(/"/g, "").trim()));
 
         let start = 0;
-        if (rows[0][0].toLowerCase().includes("task")) start = 1;
+        if (rows[0][0]?.toLowerCase().includes("task")) start = 1;
 
         for (let i = start; i < rows.length; i++) {
           const [name, type, date] = rows[i];
@@ -302,5 +305,15 @@
 
     render();
   </script>
+
+  <!-- Register the Service Worker -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("service-worker.js")
+        .then(() => console.log("Service Worker Registered"))
+        .catch(err => console.error("Service Worker Registration Failed:", err));
+    }
+  </script>
+
 </body>
 </html>
