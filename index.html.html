@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Job Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 700px;
+      margin: auto;
+    }
+
+    h2 { margin-top: 40px; }
+
+    .list {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px;
+      min-height: 60px;
+      background: #f7f7f7;
+    }
+
+    .item {
+      background: white;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      touch-action: none;
+    }
+
+    .item.dragging { opacity: 0.5; }
+
+    .item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .type-text, .date-text {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    button {
+      padding: 12px 20px;           /* larger touch area */
+      border: none;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-left: 5px;
+      touch-action: manipulation;    /* ensures proper tap on mobile */
+    }
+
+    button:hover {
+      opacity: 0.85;
+      transform: scale(1.05);
+    }
+
+    .complete-btn { background: #4CAF50; } /* bright green */
+    .delete-btn   { background: #F44336; } /* red */
+    .return-btn   { background: #2196F3; } /* bright blue */
+    .add-btn, .import-btn, .export-btn { background: #FF9800; } /* bright orange */
+
+    input, select {
+      padding: 8px;
+      font-size: 16px;
+      margin-right: 2%;
+    }
+
+    #fileInput { display: none; }
+  </style>
+</head>
+
+<body>
+  <h1>Job Manager</h1>
+
+  <div>
+    <button class="import-btn" onclick="triggerImport()">Import CSV</button>
+    <button class="export-btn" onclick="exportCSV()">Export CSV</button>
+    <input id="fileInput" type="file" accept=".csv" onchange="importCSV(event)">
+  </div>
+
+  <h2>Current Jobs</h2>
+
+  <input id="taskNameInput" type="text" placeholder="Task Name">
+  <select id="taskTypeSelect">
+    <option value="">Select Job Type (optional)</option>
+    <option value="Rings">Rings</option>
+    <option value="Cables">Cables</option>
+    <option value="Laser">Laser</option>
+    <option value="Paintlines">Paintlines</option>
+    <option value="DDH">DDH</option>
+    <option value="Scan">Scan</option>
+    <option value="MISC">MISC</option>
+  </select>
+  <input id="taskDateInput" type="text" placeholder="Date (optional)">
+  <button class="add-btn" onclick="addTask()">Add</button>
+
+  <div id="todoList" class="list"></div>
+
+  <h2>Completed Jobs</h2>
+  <div id="doneList" class="list"></div>
+
+  <script>
+    let todoList = JSON.parse(localStorage.getItem("todoList")) || [];
+    let doneList = JSON.parse(localStorage.getItem("doneList")) || [];
+
+    function save() {
+      localStorage.setItem("todoList", JSON.stringify(todoList));
+      localStorage.setItem("doneList", JSON.stringify(doneList));
+    }
+
+    function render() {
+      const todoDiv = document.getElementById("todoList");
+      const doneDiv = document.getElementById("doneList");
+
+      todoDiv.innerHTML = "";
+      doneDiv.innerHTML = "";
+
+      todoList.forEach((task, index) => {
+        todoDiv.appendChild(createTodoElement(task, index));
+      });
+
+      doneList.forEach((task, index) => {
+        doneDiv.appendChild(createDoneElement(task, index));
+      });
+    }
+
+    function createTodoElement(task, index) {
+      const el = document.createElement("div");
+      el.className = "item";
+      el.draggable = true;
+
+      el.innerHTML = `
+        <div class="item-header">
+          <strong>${task.name}</strong>
+          <div>
+            <button class="complete-btn" onclick="completeTask(${index})">✓</button>
+            <button class="delete-btn" onclick="deleteTask(${index})">✕</button>
+          </div>
+        </div>
+        <div class="type-text">${task.type}</div>
+        ${task.date ? `<div class="date-text">Date: ${task.date}</div>` : ""}
+      `;
+
+      el.addEventListener("dragstart", () => el.classList.add("dragging"));
+      el.addEventListener("dragend", () => {
+        el.classList.remove("dragging");
+        updateOrder();
+      });
+
+      return el;
+    }
+
+    function createDoneElement(task, index) {
+      const el = document.createElement("div");
+      el.className = "item";
+
+      el.innerHTML = `
+        <div class="item-header">
+          <strong>${task.name}</strong>
+          <button class="return-btn" onclick="returnToTodo(${index})">↩</button>
+        </div>
+        <div class="type-text">${task.type}</div>
+        <div class="date-text">Completed: ${task.date}</div>
+      `;
+
+      return el;
+    }
+
+    function addTask() {
+      const name = document.getElementById("taskNameInput").value.trim();
+      const type = document.getElementById("taskTypeSelect").value;
+      const date = document.getElementById("taskDateInput").value.trim();
+
+      if (!name) return;
+
+      todoList.push({ name, type, date });
+      save();
+      render();
+
+      document.getElementById("taskNameInput").value = "";
+      document.getElementById("taskTypeSelect").selectedIndex = 0;
+      document.getElementById("taskDateInput").value = "";
+    }
+
+    function completeTask(index) {
+      const today = new Date().toISOString().split("T")[0];
+      let task = todoList[index];
+      task.date = today;
+
+      doneList.push(task);
+      todoList.splice(index, 1);
+
+      save();
+      render();
+    }
+
+    function deleteTask(index) {
+      // Deleted immediately without confirmation
+      todoList.splice(index, 1);
+      save();
+      render();
+    }
+
+    function returnToTodo(index) {
+      let task = doneList[index];
+      task.date = "";
+      todoList.push(task);
+      doneList.splice(index, 1);
+
+      save();
+      render();
+    }
+
+    function updateOrder() {
+      const items = [...document.querySelectorAll("#todoList .item")];
+      todoList = items.map(el => ({
+        name: el.querySelector("strong").textContent,
+        type: el.querySelector(".type-text").textContent,
+        date: (el.querySelector(".date-text")?.textContent || "").replace(/(Date: |Completed: )/, "")
+      }));
+      save();
+    }
+
+    const todoListDiv = document.getElementById("todoList");
+    todoListDiv.addEventListener("dragover", e => {
+      e.preventDefault();
+      const dragging = document.querySelector(".dragging");
+      if (!dragging) return;
+
+      const after = getDragAfterElement(todoListDiv, e.clientY);
+      if (!after) {
+        todoListDiv.appendChild(dragging);
+      } else {
+        todoListDiv.insertBefore(dragging, after);
+      }
+    });
+
+    function getDragAfterElement(container, y) {
+      const items = [...container.querySelectorAll(".item:not(.dragging)")];
+      return items.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - (box.top + box.height / 2);
+        if (offset < 0 && offset > closest.offset) {
+          return { offset, element: child };
+        } else {
+          return closest;
+        }
+      }, { offset: -Infinity }).element;
+    }
+
+    function triggerImport() {
+      document.getElementById("fileInput").click();
+    }
+
+    function importCSV(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const rows = e.target.result
+          .trim()
+          .split("\n")
+          .map(line => line.split(",").map(x => x.replace(/"/g, "").trim()));
+
+        let start = 0;
+        if (rows[0][0].toLowerCase().includes("task")) start = 1;
+
+        for (let i = start; i < rows.length; i++) {
+          const [name, type, date] = rows[i];
+          if (name) {
+            todoList.push({ name, type: type || "", date: date || "" });
+          }
+        }
+
+        save();
+        render();
+      };
+
+      reader.readAsText(file);
+    }
+
+    function exportCSV() {
+      let csv = "Task,Type,Date,Status\n";
+      todoList.forEach(t => csv += `"${t.name}","${t.type}","${t.date}",Current\n`);
+      doneList.forEach(t => csv += `"${t.name}","${t.type}","${t.date}",Completed\n`);
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "joblist_export.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    render();
+  </script>
+</body>
+</html>
