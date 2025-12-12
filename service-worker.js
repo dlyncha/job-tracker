@@ -1,359 +1,69 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Job Tracker</title>
+// service-worker.js
 
-  <!-- Manifest for PWA -->
-  <link rel="manifest" href="manifest.json">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+const CACHE_NAME = 'job-tracker-v2'; // increment this manually if needed
+const FILES_TO_CACHE = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  // Add any other static files your app needs
+];
 
-  <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      font-family: Arial, sans-serif;
-    }
+// Install event: cache app shell
+self.addEventListener('install', (event) => {
+  console.log('[Service Worker] Installing...');
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('[Service Worker] Caching app shell');
+        return cache.addAll(FILES_TO_CACHE);
+      })
+  );
+  self.skipWaiting(); // activate worker immediately
+});
 
-    body {
-      padding: 20px;
-      max-width: 700px;
-      margin: auto;
-    }
-
-    h2 { margin-top: 40px; }
-
-    .list {
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 10px;
-      min-height: 60px;
-      background: #f7f7f7;
-      max-height: 60vh;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .item {
-      background: white;
-      padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 5px;
-      border: 1px solid #ddd;
-      touch-action: none;
-    }
-
-    .item.dragging { opacity: 0.5; }
-
-    .item-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .item-controls {
-      display: flex;
-      gap: 5px;
-      margin-top: 5px;
-    }
-
-    .type-text, .date-text {
-      font-size: 12px;
-      color: #666;
-      margin-top: 4px;
-    }
-
-    button {
-      padding: 8px 12px;
-      border: none;
-      color: white;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-      touch-action: manipulation;
-    }
-
-    button:hover {
-      opacity: 0.85;
-      transform: scale(1.05);
-    }
-
-    .complete-btn { background: #4CAF50; }
-    .delete-btn   { background: #F44336; }
-    .return-btn   { background: #2196F3; }
-    .move-up-btn, .move-down-btn { background: #9C27B0; }
-    .add-btn, .import-btn, .export-btn { background: #FF9800; }
-
-    input, select {
-      padding: 8px;
-      font-size: 16px;
-      margin-right: 2%;
-      margin-top: 5px;
-    }
-  </style>
-</head>
-
-<body>
-  <h1>Job Manager</h1>
-
-  <div>
-    <button class="import-btn" onclick="importFromSheet()">Import From Sheet</button>
-    <button class="export-btn" onclick="exportToSheet()">Export To Sheet</button>
-  </div>
-
-  <h2>Current Jobs</h2>
-
-  <input id="taskNameInput" type="text" placeholder="Task Name">
-  <select id="taskTypeSelect">
-    <option value="">Select Job Type (optional)</option>
-    <option value="Rings">Rings</option>
-    <option value="Cables">Cables</option>
-    <option value="Laser">Laser</option>
-    <option value="Paintlines">Paintlines</option>
-    <option value="DDH">DDH</option>
-    <option value="Scan">Scan</option>
-    <option value="MISC">MISC</option>
-  </select>
-  <input id="taskDateInput" type="text" placeholder="Date (optional)">
-  <button class="add-btn" onclick="addTask()">Add</button>
-
-  <div id="todoList" class="list"></div>
-
-  <h2>Completed Jobs</h2>
-  <div id="doneList" class="list"></div>
-
-  <script>
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwI3Tk94v1y9twwgG4MSEkIU-x1I3RMBQ6gjsNcxWbqJG3vqS5fArC6tNjiYG-NGuij/exec";
-
-    let todoList = JSON.parse(localStorage.getItem("todoList")) || [];
-    let doneList = JSON.parse(localStorage.getItem("doneList")) || [];
-
-    function save() {
-      localStorage.setItem("todoList", JSON.stringify(todoList));
-      localStorage.setItem("doneList", JSON.stringify(doneList));
-    }
-
-    function render() {
-      const todoDiv = document.getElementById("todoList");
-      const doneDiv = document.getElementById("doneList");
-
-      todoDiv.innerHTML = "";
-      doneDiv.innerHTML = "";
-
-      todoList.forEach((task, index) => {
-        todoDiv.appendChild(createTodoElement(task, index));
-      });
-
-      doneList.forEach((task, index) => {
-        doneDiv.appendChild(createDoneElement(task, index));
-      });
-    }
-
-    function createTodoElement(task, index) {
-      const el = document.createElement("div");
-      el.className = "item";
-      el.draggable = true;
-
-      el.innerHTML = `
-        <div class="item-header">
-          <strong>${task.name}</strong>
-          <div class="item-controls">
-            <button class="complete-btn" onclick="completeTask(${index})">✓</button>
-            <button class="delete-btn" onclick="deleteTask(${index})">✕</button>
-            <button class="move-up-btn" onclick="moveUp(${index})">↑</button>
-            <button class="move-down-btn" onclick="moveDown(${index})">↓</button>
-          </div>
-        </div>
-        <div class="type-text">${task.type}</div>
-        ${task.date ? `<div class="date-text">Date: ${task.date}</div>` : ""}
-      `;
-
-      el.addEventListener("dragstart", () => el.classList.add("dragging"));
-      el.addEventListener("dragend", () => {
-        el.classList.remove("dragging");
-        updateOrder();
-      });
-
-      return el;
-    }
-
-    function createDoneElement(task, index) {
-      const el = document.createElement("div");
-      el.className = "item";
-
-      el.innerHTML = `
-        <div class="item-header">
-          <strong>${task.name}</strong>
-          <button class="return-btn" onclick="returnToTodo(${index})">↩</button>
-        </div>
-        <div class="type-text">${task.type}</div>
-        <div class="date-text">Completed: ${task.date}</div>
-      `;
-
-      return el;
-    }
-
-    function addTask() {
-      const name = document.getElementById("taskNameInput").value.trim();
-      const type = document.getElementById("taskTypeSelect").value;
-      const date = document.getElementById("taskDateInput").value.trim();
-
-      if (!name) return;
-
-      todoList.push({ name, type, date });
-      save();
-      render();
-
-      document.getElementById("taskNameInput").value = "";
-      document.getElementById("taskTypeSelect").selectedIndex = 0;
-      document.getElementById("taskDateInput").value = "";
-    }
-
-    function completeTask(index) {
-      const today = new Date().toISOString().split("T")[0];
-      let task = todoList[index];
-      task.date = today;
-
-      doneList.push(task);
-      todoList.splice(index, 1);
-
-      save();
-      render();
-    }
-
-    function deleteTask(index) {
-      todoList.splice(index, 1);
-      save();
-      render();
-    }
-
-    function returnToTodo(index) {
-      let task = doneList[index];
-      task.date = "";
-      todoList.push(task);
-      doneList.splice(index, 1);
-
-      save();
-      render();
-    }
-
-    function moveUp(index) {
-      if (index === 0) return;
-      [todoList[index - 1], todoList[index]] = [todoList[index], todoList[index - 1]];
-      save();
-      render();
-    }
-
-    function moveDown(index) {
-      if (index === todoList.length - 1) return;
-      [todoList[index + 1], todoList[index]] = [todoList[index], todoList[index + 1]];
-      save();
-      render();
-    }
-
-    function updateOrder() {
-      const items = [...document.querySelectorAll("#todoList .item")];
-      todoList = items.map(el => ({
-        name: el.querySelector("strong").textContent,
-        type: el.querySelector(".type-text").textContent,
-        date: (el.querySelector(".date-text")?.textContent || "").replace(/(Date: |Completed: )/, "")
-      }));
-      save();
-    }
-
-    // Dragging
-    const todoListDiv = document.getElementById("todoList");
-    todoListDiv.addEventListener("dragover", e => {
-      e.preventDefault();
-      const dragging = document.querySelector(".dragging");
-      if (!dragging) return;
-
-      const after = getDragAfterElement(todoListDiv, e.clientY);
-      if (!after) {
-        todoListDiv.appendChild(dragging);
-      } else {
-        todoListDiv.insertBefore(dragging, after);
-      }
-    });
-
-    function getDragAfterElement(container, y) {
-      const items = [...container.querySelectorAll(".item:not(.dragging)")];
-      return items.reduce((closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offset = y - (box.top + box.height / 2);
-        if (offset < 0 && offset > closest.offset) {
-          return { offset, element: child };
-        } else {
-          return closest;
-        }
-      }, { offset: -Infinity }).element;
-    }
-
-    // IMPORT FROM GOOGLE SHEET
-    async function importFromSheet() {
-      try {
-        const res = await fetch(WEB_APP_URL);
-        const rows = await res.json();
-
-        rows.forEach(r => {
-          const [name, type, date] = r;
-          if (name) {
-            todoList.push({ name, type: type || "", date: date || "" });
+// Activate event: clean up old caches
+self.addEventListener('activate', (event) => {
+  console.log('[Service Worker] Activating...');
+  event.waitUntil(
+    caches.keys().then((keyList) =>
+      Promise.all(
+        keyList.map((key) => {
+          if (key !== CACHE_NAME) {
+            console.log('[Service Worker] Removing old cache:', key);
+            return caches.delete(key);
           }
-        });
+        })
+      )
+    )
+  );
+  self.clients.claim(); // take control immediately
+});
 
-        save();
-        render();
-        alert("Imported successfully from sheet!");
-      } catch (err) {
-        console.error(err);
-        alert("Import failed.");
-      }
-    }
-
-    // EXPORT COMPLETED JOBS TO SHEET
-    async function exportToSheet() {
-      try {
-        const data = doneList.map(t => ({
-          name: t.name,
-          type: t.type,
-          date: t.date
-        }));
-
-        const res = await fetch(WEB_APP_URL, {
-          method: "POST",
-          body: JSON.stringify(data)
-        });
-
-        const text = await res.text();
-
-        if (text.includes("SUCCESS")) {
-          alert("Exported to sheet successfully!");
-        } else {
-          alert("Export failed.");
+// Fetch event: serve cached content, fall back to network
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return; // only cache GET requests
+  event.respondWith(
+    caches.match(event.request)
+      .then((response) => {
+        if (response) {
+          // Return cached file
+          return response;
         }
-      } catch (err) {
-        console.error(err);
-        alert("Export error.");
-      }
-    }
-
-    render();
-  </script>
-
-  <!-- Register the Service Worker -->
-  <script>
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("service-worker.js")
-        .then(() => console.log("Service Worker Registered"))
-        .catch(err => console.error("Service Worker Registration Failed:", err));
-    }
-  </script>
-
-</body>
-</html>
+        // Fetch from network
+        return fetch(event.request)
+          .then((networkResponse) => {
+            // Optionally cache new files dynamically
+            return caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, networkResponse.clone());
+              return networkResponse;
+            });
+          });
+      })
+      .catch(() => {
+        // Optional fallback if offline and file not cached
+        if (event.request.destination === 'document') {
+          return caches.match('/index.html');
+        }
+      })
+  );
+});
