@@ -6,7 +6,6 @@
 
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
 
 <style>
 html, body {
@@ -22,8 +21,6 @@ body {
   max-width: 700px;
   margin: auto;
 }
-
-h2 { margin-top: 40px; }
 
 .list {
   border: 1px solid #ccc;
@@ -55,26 +52,17 @@ button {
   color: white;
   border-radius: 6px;
   font-weight: bold;
-  cursor: pointer;
 }
-
-button:hover { opacity: 0.85; }
 
 .complete-btn { background: #4CAF50; }
 .delete-btn { background: #F44336; }
 .edit-btn { background: #607D8B; }
+.move-btn { background: #9C27B0; }
 .return-btn { background: #2196F3; }
 .import-btn, .export-btn, .add-btn { background: #FF9800; }
 
-.note-text {
-  font-size: 13px;
-  margin-top: 5px;
-  color: #333;
-}
-.type-text {
-  font-size: 12px;
-  color: #666;
-}
+.note-text { font-size: 13px; margin-top: 4px; }
+.type-text { font-size: 12px; color: #666; }
 </style>
 </head>
 
@@ -82,16 +70,14 @@ button:hover { opacity: 0.85; }
 
 <h1>Job Manager</h1>
 
-<div>
-  <button class="import-btn" onclick="importFromSheet()">Import From Sheet</button>
-  <button class="export-btn" onclick="exportToSheet()">Export To Sheet</button>
-</div>
+<button class="import-btn" onclick="importFromSheet()">Import From Sheet</button>
+<button class="export-btn" onclick="exportToSheet()">Export To Sheet</button>
 
 <h2>Current Jobs</h2>
 
 <input id="taskNameInput" placeholder="Task Name">
 <select id="taskTypeSelect">
-  <option value="">Type (optional)</option>
+  <option value="">Type</option>
   <option>Rings</option>
   <option>Cables</option>
   <option>Laser</option>
@@ -122,143 +108,116 @@ function render() {
   todoListDiv.innerHTML = "";
   doneListDiv.innerHTML = "";
 
-  todoList.forEach((task, index) =>
-    todoListDiv.appendChild(createTodoItem(task, index))
-  );
-
-  doneList.forEach((task, index) =>
-    doneListDiv.appendChild(createDoneItem(task, index))
-  );
+  todoList.forEach((t, i) => todoListDiv.appendChild(todoItem(t, i)));
+  doneList.forEach((t, i) => doneListDiv.appendChild(doneItem(t, i)));
 }
 
-function createTodoItem(task, index) {
-  const el = document.createElement("div");
-  el.className = "item";
-  el.innerHTML = `
+function todoItem(task, index) {
+  const d = document.createElement("div");
+  d.className = "item";
+  d.innerHTML = `
     <strong>${task.name}</strong>
     <div class="type-text">${task.type || ""}</div>
     <div class="item-controls">
       <button class="complete-btn" onclick="completeTask(${index})">✓</button>
       <button class="edit-btn" onclick="editNotes(${index})">✎</button>
+      <button class="move-btn" onclick="moveUp(${index})">↑</button>
+      <button class="move-btn" onclick="moveDown(${index})">↓</button>
       <button class="delete-btn" onclick="deleteTask(${index})">✕</button>
     </div>
     ${task.notes ? `<div class="note-text">Notes: ${task.notes}</div>` : ""}
   `;
-  return el;
+  return d;
 }
 
-function createDoneItem(task, index) {
-  const el = document.createElement("div");
-  el.className = "item";
-  el.innerHTML = `
+function doneItem(task, index) {
+  const d = document.createElement("div");
+  d.className = "item";
+  d.innerHTML = `
     <strong>${task.name}</strong>
     <div class="type-text">${task.type || ""}</div>
     <div class="note-text">Completed: ${task.date}</div>
     ${task.notes ? `<div class="note-text">Notes: ${task.notes}</div>` : ""}
-    <div class="item-controls">
-      <button class="return-btn" onclick="returnToTodo(${index})">↩</button>
-    </div>
+    <button class="return-btn" onclick="returnToTodo(${index})">↩</button>
   `;
-  return el;
+  return d;
 }
 
 function addTask() {
-  const name = taskNameInput.value.trim();
-  if (!name) return;
-
+  if (!taskNameInput.value.trim()) return;
   todoList.push({
-    name,
+    name: taskNameInput.value.trim(),
     type: taskTypeSelect.value,
     notes: ""
   });
-
   taskNameInput.value = "";
   taskTypeSelect.selectedIndex = 0;
   save(); render();
 }
 
-function editNotes(index) {
-  const notes = prompt("Edit notes:", todoList[index].notes || "");
+function editNotes(i) {
+  const notes = prompt("Edit notes:", todoList[i].notes || "");
   if (notes !== null) {
-    todoList[index].notes = notes;
+    todoList[i].notes = notes;
     save(); render();
   }
 }
 
-function completeTask(index) {
-  const task = todoList.splice(index, 1)[0];
-  task.date = new Date().toLocaleString(); // date + time
-  doneList.push(task);
+function completeTask(i) {
+  const t = todoList.splice(i, 1)[0];
+  t.date = new Date().toLocaleString();
+  doneList.push(t);
   save(); render();
 }
 
-function deleteTask(index) {
-  todoList.splice(index, 1);
+function deleteTask(i) { todoList.splice(i,1); save(); render(); }
+function returnToTodo(i) {
+  const t = doneList.splice(i,1)[0];
+  delete t.date;
+  todoList.push(t);
   save(); render();
 }
 
-function returnToTodo(index) {
-  const task = doneList.splice(index, 1)[0];
-  delete task.date;
-  todoList.push(task);
+function moveUp(i) {
+  if (i === 0) return;
+  [todoList[i-1], todoList[i]] = [todoList[i], todoList[i-1]];
+  save(); render();
+}
+
+function moveDown(i) {
+  if (i === todoList.length - 1) return;
+  [todoList[i+1], todoList[i]] = [todoList[i], todoList[i+1]];
   save(); render();
 }
 
 async function importFromSheet() {
-  try {
-    const res = await fetch(WEB_APP_URL);
-    const rows = await res.json();
+  const res = await fetch(WEB_APP_URL);
+  const rows = await res.json();
 
-    rows.forEach(([name, type, date, notes]) => {
-      if (name) {
-        todoList.push({
-          name,
-          type: type || "",
-          notes: notes || ""
-        });
-      }
-    });
+  rows.forEach(([name, type, date, notes]) => {
+    if (name) todoList.push({ name, type, notes: notes || "" });
+  });
 
-    save(); render();
-    alert("Jobs imported and moved to 'Jobs sent to ipad'");
-  } catch (e) {
-    console.error(e);
-    alert("Import failed");
-  }
+  save(); render();
+  alert("Jobs imported and moved to 'Jobs sent to ipad'");
 }
 
 async function exportToSheet() {
-  try {
-    const res = await fetch(WEB_APP_URL, {
-      method: "POST",
-      body: JSON.stringify(doneList)
-    });
+  const res = await fetch(WEB_APP_URL, {
+    method: "POST",
+    body: JSON.stringify(doneList)
+  });
 
-    const text = await res.text();
-    if (text.includes("SUCCESS")) {
-      doneList = [];   // clear after successful export
-      save(); render();
-      alert("Completed jobs exported and cleared");
-    } else {
-      alert("Export failed");
-    }
-  } catch (e) {
-    console.error(e);
-    alert("Export error");
+  if ((await res.text()).includes("SUCCESS")) {
+    doneList = [];
+    save(); render();
+    alert("Completed jobs archived and cleared");
   }
 }
 
 const todoListDiv = document.getElementById("todoList");
 const doneListDiv = document.getElementById("doneList");
-
 render();
-</script>
-
-<!-- Service Worker -->
-<script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js");
-}
 </script>
 
 </body>
