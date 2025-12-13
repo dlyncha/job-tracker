@@ -94,6 +94,28 @@ button {
 <div id="doneList" class="list"></div>
 
 <script>
+/* ===============================
+   SERVICE WORKER REGISTRATION
+   =============================== */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/job-tracker/service-worker.js')
+      .then(reg => {
+        console.log('Service Worker registered:', reg.scope);
+      })
+      .catch(err => {
+        console.error('Service Worker registration failed:', err);
+      });
+  });
+}
+</script>
+
+<script>
+/* ===============================
+   APP LOGIC (UNCHANGED)
+   =============================== */
+
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwP3vDjq7dbY5pa1UyVonn6Q0X8iAqNylQup6KLOe-Um2QKHi3CJCb4aM7tAN5KlztZ/exec";
 
 let todoList = JSON.parse(localStorage.getItem("todoList")) || [];
@@ -171,6 +193,7 @@ function completeTask(i) {
 }
 
 function deleteTask(i) { todoList.splice(i,1); save(); render(); }
+
 function returnToTodo(i) {
   const t = doneList.splice(i,1)[0];
   delete t.date;
@@ -222,8 +245,5 @@ render();
 
 </body>
 </html>
-
-
-
 
 
