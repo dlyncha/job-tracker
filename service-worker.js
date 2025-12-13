@@ -1,69 +1,74 @@
 // service-worker.js
 
-const CACHE_NAME = 'job-tracker-v10'; // increment this manually if needed
-const FILES_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  // Add any other static files your app needs
+const CACHE_NAME = 'job-tracker-cache-v1';
+
+// Files to cache
+const APP_SHELL = [
+  '/job-tracker/',
+  '/job-tracker/index.html',
+  '/job-tracker/manifest.json',
+  '/job-tracker/styles.css',   // add your CSS file(s) here
+  '/job-tracker/app.js'        // add your JS file(s) here
 ];
 
-// Install event: cache app shell
+// Install event: cache the app shell
 self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Installing...');
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[Service Worker] Caching app shell');
-        return cache.addAll(FILES_TO_CACHE);
-      })
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(APP_SHELL);
+    })
   );
-  self.skipWaiting(); // activate worker immediately
+  self.skipWaiting();
 });
 
 // Activate event: clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activating...');
   event.waitUntil(
-    caches.keys().then((keyList) =>
+    caches.keys().then((keys) =>
       Promise.all(
-        keyList.map((key) => {
+        keys.map((key) => {
           if (key !== CACHE_NAME) {
-            console.log('[Service Worker] Removing old cache:', key);
             return caches.delete(key);
           }
         })
       )
     )
   );
-  self.clients.claim(); // take control immediately
+  self.clients.claim();
 });
 
-// Fetch event: serve cached content, fall back to network
+// Fetch event: offline-first strategy
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return; // only cache GET requests
+  if (event.request.method !== 'GET') return;
+
+  // Navigation handler — always serve index.html for SPA routes
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      caches.match('/job-tracker/index.html').then((cached) => {
+        return cached || fetch(event.request);
+      })
+    );
+    return;
+  }
+
+  // For other requests, try cache then network
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        if (response) {
-          // Return cached file
-          return response;
-        }
-        // Fetch from network
-        return fetch(event.request)
-          .then((networkResponse) => {
-            // Optionally cache new files dynamically
-            return caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, networkResponse.clone());
-              return networkResponse;
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+
+      return fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const cloned = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, cloned);
             });
-          });
-      })
-      .catch(() => {
-        // Optional fallback if offline and file not cached
-        if (event.request.destination === 'document') {
-          return caches.match('/index.html');
-        }
-      })
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          // Optional: fallback if needed
+        });
+    })
   );
 });
