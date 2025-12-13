@@ -1,10 +1,22 @@
 {
   "name": "Job Tracker",
   "short_name": "JobTracker",
-  "start_url": "./",
+  "start_url": "https://dlyncha.github.io/job-tracker/index.html",
+  "scope": "/job-tracker/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "description": "Offline job tracker app",
-  "icons": []
+  "icons": [
+    {
+      "src": "/job-tracker/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/job-tracker/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }
