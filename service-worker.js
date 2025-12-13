@@ -1,6 +1,6 @@
 // service-worker.js
 
-const CACHE_NAME = 'job-tracker-v8'; // increment this manually if needed
+const CACHE_NAME = 'job-tracker-v9'; // increment this manually if needed
 const FILES_TO_CACHE = [
   '/',
   '/index.html',
