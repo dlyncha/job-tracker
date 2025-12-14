@@ -74,7 +74,6 @@ button {
 <button class="import-btn" onclick="importFromSheet()">Import From Sheet</button>
 <button class="export-btn" onclick="exportToSheet()">Export Completed to Sheet</button>
 <button class="export-btn" onclick="exportActiveToSheet()">Export Current to Sheet</button>
-<button class="delete-btn" onclick="clearAllCurrent()">Clear All Current Jobs</button>
 
 <h2>Current Jobs</h2>
 
@@ -96,6 +95,15 @@ button {
 <h2>Completed Jobs</h2>
 <div id="doneList" class="list"></div>
 
+<hr style="margin:30px 0">
+
+<button
+  class="delete-btn"
+  style="width:100%; padding:14px; font-size:16px"
+  onclick="clearAllCurrent()">
+  Clear ALL Current Jobs
+</button>
+
 <script>
 /* ===============================
    SERVICE WORKER REGISTRATION
@@ -104,14 +112,14 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/job-tracker/service-worker.js')
-      .then(reg => console.log('Service Worker registered'))
+      .then(() => console.log('Service Worker registered'))
       .catch(err => console.error('SW registration failed', err));
   });
 }
 </script>
 
 <script>
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw8UVpgmT6V18EdlVhsQNrDBVlT3T4NEOtBreSttg2MIqk8ENTKbIEMOk_aiQTChZ1B/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwP3vDjq7dbY5pa1UyVonn6Q0X8iAqNylQup6KLOe-Um2QKHi3CJCb4aM7tAN5KlztZ/exec";
 
 let todoList = JSON.parse(localStorage.getItem("todoList")) || [];
 let doneList = JSON.parse(localStorage.getItem("doneList")) || [];
@@ -131,6 +139,13 @@ function render() {
 function todoItem(task, index) {
   const d = document.createElement("div");
   d.className = "item";
+  d.draggable = true;
+  d.dataset.index = index;
+
+  d.addEventListener("dragstart", dragStart);
+  d.addEventListener("dragover", dragOver);
+  d.addEventListener("drop", dropItem);
+
   d.innerHTML = `
     <strong>${task.name}</strong>
     <div class="type-text">${task.type || ""}</div>
@@ -218,6 +233,30 @@ function moveUp(i) {
 function moveDown(i) {
   if (i === todoList.length - 1) return;
   [todoList[i + 1], todoList[i]] = [todoList[i], todoList[i + 1]];
+  save(); render();
+}
+
+/* ===== DRAG + DROP ===== */
+let draggedIndex = null;
+
+function dragStart(e) {
+  draggedIndex = Number(this.dataset.index);
+  e.dataTransfer.effectAllowed = "move";
+}
+
+function dragOver(e) {
+  e.preventDefault();
+}
+
+function dropItem(e) {
+  e.preventDefault();
+  const targetIndex = Number(this.dataset.index);
+  if (draggedIndex === null || draggedIndex === targetIndex) return;
+
+  const moved = todoList.splice(draggedIndex, 1)[0];
+  todoList.splice(targetIndex, 0, moved);
+
+  draggedIndex = null;
   save(); render();
 }
 
