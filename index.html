@@ -105,7 +105,7 @@ button {
    CONFIG
    =============================== */
 const WEB_APP_URL =
-  "https://script.google.com/macros/s/AKfycbyGAHU9ExJUO8rXmNhWwGDDe8Ag6LgR_bpEh_cb8yj3e3el-RCFE_XR9YNAn_1W0meJ/exec";
+  "PASTE_YOUR_LATEST_DEPLOYMENT_URL_HERE";
 
 /* ===============================
    STATE
@@ -134,7 +134,6 @@ function render() {
 function todoItem(task, index) {
   const d = document.createElement("div");
   d.className = "item";
-  d.dataset.index = index;
 
   d.innerHTML = `
     <strong>${task.name}</strong>
@@ -245,9 +244,17 @@ async function importFromSheet() {
 }
 
 async function exportCompleted() {
+  if (!doneList.length) {
+    alert("No completed jobs to export");
+    return;
+  }
+
   const res = await fetch(WEB_APP_URL, {
     method: "POST",
-    body: JSON.stringify(doneList)
+    body: JSON.stringify({
+      type: "completed",
+      data: doneList
+    })
   });
 
   if ((await res.text()).includes("SUCCESS")) {
@@ -286,5 +293,4 @@ render();
 
 </body>
 </html>
-
 
