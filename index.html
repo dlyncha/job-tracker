@@ -11,7 +11,6 @@
 html, body {
   height: 100%;
   margin: 0;
-  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   font-family: Arial, sans-serif;
 }
@@ -33,17 +32,17 @@ body {
 
 .item {
   background: white;
-  padding: 12px;
-  margin-bottom: 12px;
-  border-radius: 6px;
+  padding: 14px;
+  margin-bottom: 14px;
+  border-radius: 8px;
   border: 1px solid #ddd;
 }
 
 .item-controls {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
-  margin-top: 8px;
+  margin-top: 10px;
 }
 
 button {
@@ -56,13 +55,13 @@ button {
 }
 
 .complete-btn { background: #4CAF50; }
-.delete-btn { background: #F44336; margin-left: 20px; }
 .edit-btn { background: #607D8B; }
 .move-btn { background: #9C27B0; }
 .return-btn { background: #2196F3; }
 .import-btn, .export-btn, .add-btn { background: #FF9800; }
+.delete-btn { background: #F44336; margin-left: 20px; }
 
-.note-text { font-size: 13px; margin-top: 4px; }
+.note-text { font-size: 13px; margin-top: 6px; }
 .type-text { font-size: 12px; color: #666; }
 </style>
 </head>
@@ -72,8 +71,8 @@ button {
 <h1>Job Manager</h1>
 
 <button class="import-btn" onclick="importFromSheet()">Import From Sheet</button>
-<button class="export-btn" onclick="exportToSheet()">Export Completed to Sheet</button>
-<button class="export-btn" onclick="exportActiveToSheet()">Export Current to Sheet</button>
+<button class="export-btn" onclick="exportCompleted()">Export Completed to Sheet</button>
+<button class="export-btn" onclick="exportActive()">Export Current to Sheet</button>
 
 <h2>Current Jobs</h2>
 
@@ -97,32 +96,26 @@ button {
 
 <hr style="margin:30px 0">
 
-<button
-  class="delete-btn"
-  onclick="clearAllCurrent()">
+<button class="export-btn" onclick="clearAllCurrent()">
   Clear ALL Current Jobs
 </button>
 
 <script>
 /* ===============================
-   SERVICE WORKER REGISTRATION
+   CONFIG
    =============================== */
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/job-tracker/service-worker.js')
-      .then(() => console.log('Service Worker registered'))
-      .catch(err => console.error('SW registration failed', err));
-  });
-}
-</script>
+const WEB_APP_URL =
+  "https://script.google.com/macros/s/AKfycbyGAHU9ExJUO8rXmNhWwGDDe8Ag6LgR_bpEh_cb8yj3e3el-RCFE_XR9YNAn_1W0meJ/exec";
 
-<script>
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyGAHU9ExJUO8rXmNhWwGDDe8Ag6LgR_bpEh_cb8yj3e3el-RCFE_XR9YNAn_1W0meJ/exec";
-
+/* ===============================
+   STATE
+   =============================== */
 let todoList = JSON.parse(localStorage.getItem("todoList")) || [];
 let doneList = JSON.parse(localStorage.getItem("doneList")) || [];
 
+/* ===============================
+   SAVE / RENDER
+   =============================== */
 function save() {
   localStorage.setItem("todoList", JSON.stringify(todoList));
   localStorage.setItem("doneList", JSON.stringify(doneList));
@@ -135,26 +128,26 @@ function render() {
   doneList.forEach((t, i) => doneListDiv.appendChild(doneItem(t, i)));
 }
 
+/* ===============================
+   UI BUILDERS
+   =============================== */
 function todoItem(task, index) {
   const d = document.createElement("div");
   d.className = "item";
-  d.draggable = true;
   d.dataset.index = index;
-
-  d.addEventListener("dragstart", dragStart);
-  d.addEventListener("dragover", dragOver);
-  d.addEventListener("drop", dropItem);
 
   d.innerHTML = `
     <strong>${task.name}</strong>
     <div class="type-text">${task.type || ""}</div>
+
     <div class="item-controls">
       <button class="complete-btn" onclick="completeTask(${index})">✓</button>
-      <button class="edit-btn" onclick="editNotes(${index})">✎</button>
+      <button class="edit-btn" onclick="editTask(${index})">✎</button>
       <button class="move-btn" onclick="moveUp(${index})">↑</button>
       <button class="move-btn" onclick="moveDown(${index})">↓</button>
       <button class="delete-btn" onclick="deleteTask(${index})">✕</button>
     </div>
+
     ${task.notes ? `<div class="note-text">Notes: ${task.notes}</div>` : ""}
   `;
   return d;
@@ -163,6 +156,7 @@ function todoItem(task, index) {
 function doneItem(task, index) {
   const d = document.createElement("div");
   d.className = "item";
+
   d.innerHTML = `
     <strong>${task.name}</strong>
     <div class="type-text">${task.type || ""}</div>
@@ -173,6 +167,9 @@ function doneItem(task, index) {
   return d;
 }
 
+/* ===============================
+   TASK ACTIONS
+   =============================== */
 function addTask() {
   if (!taskNameInput.value.trim()) return;
   todoList.push({
@@ -185,15 +182,14 @@ function addTask() {
   save(); render();
 }
 
-function editNotes(i) {
-  const newName = prompt("Edit task name:", todoList[i].name);
-  if (newName === null || !newName.trim()) return;
+function editTask(i) {
+  const name = prompt("Edit task name:", todoList[i].name);
+  if (!name) return;
+  const notes = prompt("Edit notes:", todoList[i].notes || "");
+  if (notes === null) return;
 
-  const newNotes = prompt("Edit notes:", todoList[i].notes || "");
-  if (newNotes === null) return;
-
-  todoList[i].name = newName.trim();
-  todoList[i].notes = newNotes;
+  todoList[i].name = name.trim();
+  todoList[i].notes = notes;
   save(); render();
 }
 
@@ -205,13 +201,13 @@ function completeTask(i) {
 }
 
 function deleteTask(i) {
-  if (!confirm("Are you sure you want to delete this job?")) return;
+  if (!confirm("Delete this job?")) return;
   todoList.splice(i, 1);
   save(); render();
 }
 
 function clearAllCurrent() {
-  if (!confirm("Are you sure you want to clear ALL current jobs?")) return;
+  if (!confirm("Clear ALL current jobs?")) return;
   todoList = [];
   save(); render();
 }
@@ -235,30 +231,9 @@ function moveDown(i) {
   save(); render();
 }
 
-/* ===== DRAG + DROP ===== */
-let draggedIndex = null;
-
-function dragStart(e) {
-  draggedIndex = Number(this.dataset.index);
-  e.dataTransfer.effectAllowed = "move";
-}
-
-function dragOver(e) {
-  e.preventDefault();
-}
-
-function dropItem(e) {
-  e.preventDefault();
-  const targetIndex = Number(this.dataset.index);
-  if (draggedIndex === null || draggedIndex === targetIndex) return;
-
-  const moved = todoList.splice(draggedIndex, 1)[0];
-  todoList.splice(targetIndex, 0, moved);
-
-  draggedIndex = null;
-  save(); render();
-}
-
+/* ===============================
+   GOOGLE SHEETS
+   =============================== */
 async function importFromSheet() {
   const res = await fetch(WEB_APP_URL);
   const rows = await res.json();
@@ -269,11 +244,12 @@ async function importFromSheet() {
   alert("Jobs imported");
 }
 
-async function exportToSheet() {
+async function exportCompleted() {
   const res = await fetch(WEB_APP_URL, {
     method: "POST",
     body: JSON.stringify(doneList)
   });
+
   if ((await res.text()).includes("SUCCESS")) {
     doneList = [];
     save(); render();
@@ -281,18 +257,28 @@ async function exportToSheet() {
   }
 }
 
-async function exportActiveToSheet() {
-  const url =
-    WEB_APP_URL +
-    "?action=exportActive&data=" +
-    encodeURIComponent(JSON.stringify(todoList));
+async function exportActive() {
+  if (!todoList.length) {
+    alert("No current jobs to export");
+    return;
+  }
 
-  const res = await fetch(url);
+  const res = await fetch(WEB_APP_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      type: "active",
+      data: todoList
+    })
+  });
+
   if ((await res.text()).includes("SUCCESS")) {
     alert("Current jobs exported to Active sheet");
   }
 }
 
+/* ===============================
+   INIT
+   =============================== */
 const todoListDiv = document.getElementById("todoList");
 const doneListDiv = document.getElementById("doneList");
 render();
@@ -300,9 +286,5 @@ render();
 
 </body>
 </html>
-
-
-
-
 
 
