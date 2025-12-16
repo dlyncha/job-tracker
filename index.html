@@ -71,8 +71,7 @@ button {
 <h1>Job Manager</h1>
 
 <button class="import-btn" onclick="importFromSheet()">Import From Sheet</button>
-<button class="export-btn" onclick="exportCompleted()">Export Completed to Sheet</button>
-<button class="export-btn" onclick="exportActive()">Export Current to Sheet</button>
+<button class="export-btn" onclick="exportAll()">Export to Sheet</button>
 
 <h2>Current Jobs</h2>
 
@@ -105,7 +104,7 @@ button {
    CONFIG
    =============================== */
 const WEB_APP_URL =
-  "https://script.google.com/macros/s/AKfycbzgaevpDKfz-xzx_nkNN6Qyij4MYyJoKNvjnSGsg5wxRJ-0wIjjji7C6ksisId28CS9/exec";
+  "https://script.google.com/macros/s/AKfycbxC2Ud6rKOmsagcl-mx0aQV07AHH08G2AzJyoMbShSk0CLZr9tAWxm2dn0z-mE05H5L/exec";
 
 /* ===============================
    STATE
@@ -243,9 +242,9 @@ async function importFromSheet() {
   alert("Jobs imported");
 }
 
-async function exportCompleted() {
-  if (!doneList.length) {
-    alert("No completed jobs to export");
+async function exportAll() {
+  if (!todoList.length && !doneList.length) {
+    alert("Nothing to export");
     return;
   }
 
@@ -253,33 +252,15 @@ async function exportCompleted() {
     method: "POST",
     body: JSON.stringify({
       type: "completed",
-      data: doneList
+      completed: doneList,
+      active: todoList
     })
   });
 
   if ((await res.text()).includes("SUCCESS")) {
     doneList = [];
     save(); render();
-    alert("Completed jobs archived");
-  }
-}
-
-async function exportActive() {
-  if (!todoList.length) {
-    alert("No current jobs to export");
-    return;
-  }
-
-  const res = await fetch(WEB_APP_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      type: "active",
-      data: todoList
-    })
-  });
-
-  if ((await res.text()).includes("SUCCESS")) {
-    alert("Current jobs exported to Active sheet");
+    alert("Jobs exported successfully");
   }
 }
 
@@ -293,5 +274,3 @@ render();
 
 </body>
 </html>
-
-
