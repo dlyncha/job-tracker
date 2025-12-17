@@ -11,7 +11,6 @@
 html, body {
   height: 100%;
   margin: 0;
-  -webkit-overflow-scrolling: touch;
   font-family: Arial, sans-serif;
 }
 
@@ -19,6 +18,11 @@ body {
   padding: 20px;
   max-width: 700px;
   margin: auto;
+  transition: background 0.3s;
+}
+
+body.low {
+  background: #eef2f6;
 }
 
 .list {
@@ -30,51 +34,64 @@ body {
   overflow-y: auto;
 }
 
+body.low .list {
+  background: #e3e9f0;
+}
+
 .item {
   background: white;
-  padding: 14px;
-  margin-bottom: 14px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
   border-radius: 8px;
   border: 1px solid #ddd;
 }
 
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .item-controls {
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-top: 10px;
+  gap: 6px;
 }
 
 button {
-  padding: 10px 14px;
-  font-size: 15px;
+  padding: 6px 10px;
+  font-size: 13px;
   border: none;
   color: white;
-  border-radius: 8px;
+  border-radius: 6px;
   font-weight: bold;
 }
 
-.tab-btn { background:#3F51B5; }
 .complete-btn { background: #4CAF50; }
 .edit-btn { background: #607D8B; }
 .move-btn { background: #9C27B0; }
 .return-btn { background: #2196F3; }
 .import-btn, .export-btn, .add-btn { background: #FF9800; }
-.delete-btn { background: #F44336; margin-left: 20px; }
+.delete-btn { background: #F44336; }
 
-.note-text { font-size: 13px; margin-top: 6px; }
-.type-text { font-size: 12px; color: #666; }
+.low button {
+  filter: saturate(70%);
+}
+
+.note-text { font-size: 12px; margin-top: 4px; }
+.type-text { font-size: 11px; color: #666; }
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 30px;
+}
 </style>
 </head>
 
 <body>
 
 <h1>Job Manager</h1>
-
-<button class="tab-btn" onclick="switchTab('HIGH')">Main Jobs</button>
-<button class="tab-btn" onclick="switchTab('LOW')">Low Priority Jobs</button>
-
-<br><br>
 
 <button class="import-btn" onclick="importFromSheet()">Import From Sheet</button>
 <button class="export-btn" onclick="exportAll()">Export to Sheet</button>
@@ -101,30 +118,20 @@ button {
   <div id="doneList" class="list"></div>
 </div>
 
-<hr style="margin:30px 0">
-
-<button class="export-btn" onclick="clearAllCurrent()">
-  Clear ALL Current Jobs
-</button>
+<div class="footer">
+  <button class="export-btn" onclick="clearAllCurrent()">Clear ALL Current Jobs</button>
+  <button id="tabButton" class="import-btn" onclick="toggleTab()"></button>
+</div>
 
 <script>
-/* ===============================
-   CONFIG
-   =============================== */
 const WEB_APP_URL =
-"https://script.google.com/macros/s/AKfycby06Lh8uyXoIuFPlQmRUmSH50lHgHQmp7ag-_Os9-FezJQj5IYLgqT4iSB0oPSCh3OF/exec";
+"https://script.google.com/macros/s/AKfycbxwoCbhUw9P5zUGN6fIOUKhhKcT5wWYQE5Dbgpntw0bUlV42druvq0aJ1KXOsw1eJNW/exec";
 
-/* ===============================
-   STATE
-   =============================== */
 let todoList = JSON.parse(localStorage.getItem("todoList")) || [];
 let lowTodoList = JSON.parse(localStorage.getItem("lowTodoList")) || [];
 let doneList = JSON.parse(localStorage.getItem("doneList")) || [];
 let activeTab = "HIGH";
 
-/* ===============================
-   SAVE / RENDER
-   =============================== */
 function save() {
   localStorage.setItem("todoList", JSON.stringify(todoList));
   localStorage.setItem("lowTodoList", JSON.stringify(lowTodoList));
@@ -132,6 +139,7 @@ function save() {
 }
 
 function render() {
+  document.body.classList.toggle("low", activeTab === "LOW");
   todoListDiv.innerHTML = "";
   doneListDiv.innerHTML = "";
 
@@ -143,39 +151,37 @@ function render() {
     completedSection.style.display = "block";
     doneList.forEach((t, i) => doneListDiv.appendChild(doneItem(t, i)));
     currentTitle.textContent = "Current Jobs";
+    tabButton.textContent = "Low Priority Jobs";
   } else {
     completedSection.style.display = "none";
     currentTitle.textContent = "Low Priority Jobs";
+    tabButton.textContent = "Main Jobs";
   }
 }
 
-/* ===============================
-   TAB SWITCH
-   =============================== */
-function switchTab(tab) {
-  activeTab = tab;
+function toggleTab() {
+  activeTab = activeTab === "HIGH" ? "LOW" : "HIGH";
   render();
 }
 
-/* ===============================
-   UI BUILDERS
-   =============================== */
 function todoItem(task, index) {
   const d = document.createElement("div");
   d.className = "item";
 
   d.innerHTML = `
-    <strong>${task.name}</strong>
-    <div class="type-text">${task.type || ""}</div>
-
-    <div class="item-controls">
-      <button class="complete-btn" onclick="completeTask(${index})">✓</button>
-      <button class="edit-btn" onclick="editTask(${index})">✎</button>
-      <button class="move-btn" onclick="moveUp(${index})">↑</button>
-      <button class="move-btn" onclick="moveDown(${index})">↓</button>
-      <button class="delete-btn" onclick="deleteTask(${index})">✕</button>
+    <div class="item-header">
+      <div>
+        <strong>${task.name}</strong>
+        <div class="type-text">${task.type || ""}</div>
+      </div>
+      <div class="item-controls">
+        <button class="complete-btn" onclick="completeTask(${index})">✓</button>
+        <button class="edit-btn" onclick="editTask(${index})">✎</button>
+        <button class="move-btn" onclick="moveUp(${index})">↑</button>
+        <button class="move-btn" onclick="moveDown(${index})">↓</button>
+        <button class="delete-btn" onclick="deleteTask(${index})">✕</button>
+      </div>
     </div>
-
     ${task.notes ? `<div class="note-text">Notes: ${task.notes}</div>` : ""}
   `;
   return d;
@@ -189,27 +195,15 @@ function doneItem(task, index) {
     <strong>${task.name}</strong>
     <div class="type-text">${task.type || ""}</div>
     <div class="note-text">Completed: ${task.date}</div>
-    ${task.notes ? `<div class="note-text">Notes: ${task.notes}</div>` : ""}
     <button class="return-btn" onclick="returnToTodo(${index})">↩</button>
   `;
   return d;
 }
 
-/* ===============================
-   TASK ACTIONS
-   =============================== */
 function addTask() {
   if (!taskNameInput.value.trim()) return;
-
   const target = activeTab === "HIGH" ? todoList : lowTodoList;
-
-  target.push({
-    name: taskNameInput.value.trim(),
-    type: taskTypeSelect.value,
-    notes: "",
-    priority: activeTab
-  });
-
+  target.push({ name: taskNameInput.value.trim(), type: taskTypeSelect.value, notes: "", priority: activeTab });
   taskNameInput.value = "";
   taskTypeSelect.selectedIndex = 0;
   save(); render();
@@ -221,7 +215,6 @@ function editTask(i) {
   if (!name) return;
   const notes = prompt("Edit notes:", list[i].notes || "");
   if (notes === null) return;
-
   list[i].name = name.trim();
   list[i].notes = notes;
   save(); render();
@@ -243,9 +236,9 @@ function deleteTask(i) {
 }
 
 function clearAllCurrent() {
-  if (!confirm("Clear ALL current jobs?")) return;
-  if (activeTab === "HIGH") todoList = [];
-  else lowTodoList = [];
+  if (!confirm("This will CLEAR ALL jobs in BOTH Main and Low Priority tabs. Continue?")) return;
+  todoList = [];
+  lowTodoList = [];
   save(); render();
 }
 
@@ -270,39 +263,21 @@ function moveDown(i) {
   save(); render();
 }
 
-/* ===============================
-   GOOGLE SHEETS
-   =============================== */
 async function importFromSheet() {
   const res = await fetch(WEB_APP_URL);
   const jobs = await res.json();
-
-  jobs.forEach(job => {
-    if (job.priority === "LOW") lowTodoList.push(job);
-    else todoList.push(job);
-  });
-
+  jobs.forEach(job => job.priority === "LOW" ? lowTodoList.push(job) : todoList.push(job));
   save(); render();
   alert("Jobs imported");
 }
 
 async function exportAll() {
   const active = [...todoList, ...lowTodoList];
-
-  if (!active.length && !doneList.length) {
-    alert("Nothing to export");
-    return;
-  }
-
+  if (!active.length && !doneList.length) return alert("Nothing to export");
   const res = await fetch(WEB_APP_URL, {
     method: "POST",
-    body: JSON.stringify({
-      type: "completed",
-      completed: doneList,
-      active
-    })
+    body: JSON.stringify({ type: "completed", completed: doneList, active })
   });
-
   if ((await res.text()).includes("SUCCESS")) {
     doneList = [];
     save(); render();
@@ -310,17 +285,14 @@ async function exportAll() {
   }
 }
 
-/* ===============================
-   INIT
-   =============================== */
 const todoListDiv = document.getElementById("todoList");
 const doneListDiv = document.getElementById("doneList");
 const completedSection = document.getElementById("completedSection");
 const currentTitle = document.getElementById("currentTitle");
+const tabButton = document.getElementById("tabButton");
 
 render();
 </script>
 
 </body>
 </html>
-
