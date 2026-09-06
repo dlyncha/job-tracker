@@ -1,6 +1,6 @@
 // service-worker.js
 
-const CACHE_NAME = 'job-tracker-cache-19';
+const CACHE_NAME = 'job-tracker-cache-20';
 
 // Files to cache
 const APP_SHELL = [
