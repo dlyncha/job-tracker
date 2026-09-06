@@ -125,7 +125,7 @@ button {
 
 <script>
 const WEB_APP_URL =
-"https://script.google.com/macros/s/AKfycby06Lh8uyXoIuFPlQmRUmSH50lHgHQmp7ag-_Os9-FezJQj5IYLgqT4iSB0oPSCh3OF/exec";
+"https://script.google.com/macros/s/AKfycbzZUR9YxdC3YDz98c8ePq5ZFTK6rhlBtSVe9uPES6OHFQovMkHyckLL4HwBCZQPJNxW/exec";
 
 let todoList = JSON.parse(localStorage.getItem("todoList")) || [];
 let lowTodoList = JSON.parse(localStorage.getItem("lowTodoList")) || [];
@@ -183,6 +183,7 @@ function todoItem(task, index) {
       </div>
     </div>
     ${task.notes ? `<div class="note-text">Notes: ${task.notes}</div>` : ""}
+    ${task.date ? `<div class="note-text">Date: ${task.date}</div>` : ""}
   `;
   return d;
 }
